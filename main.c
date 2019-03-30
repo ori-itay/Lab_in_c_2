@@ -63,12 +63,12 @@ void read_line(FILE* input_stream, char** line){
 void is_match_in_line(char* haystack, char* needle, struct arguments args){
     char* found;
     //switch (args){
-     //   case i:
-     //   {
+     //   case bla : /* this case at the moment fits for when only -i is on (make changes according to the struct etc, discuss with ori */
+      //   {
             char* lower_case_haystack = tolower_string(haystack);
             char* lower_case_needle = tolower_string(needle);
             found = strstr(lower_case_haystack, lower_case_needle);
-            free(lower_case_haystack); /* in future cases, if the lower case needs to be printed, make sure it is not freed here or printed before this line!! */
+            free(lower_case_haystack); /* in future cases, if the lower case needs to be printed, make sure it is not freed here or print it before this line!! */
             free(lower_case_needle); /* same comment as the line above */
             if (found!=NULL){ /* if equals null, means not found, else it points to the occurrence .. */
                 printf("%s\n", haystack); /* print the original line, not the lowered case one */
