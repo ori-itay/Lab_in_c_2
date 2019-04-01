@@ -102,13 +102,6 @@ void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *pa
 int report_line_match(char* haystack, char* needle, struct arguments *params) {
     int match;
 
-    if (params->x) {
-        match =  (strstr(haystack, needle)!= NULL);
-    }
-    else{
-        match = strcmp(haystack, needle);
-    }
-
     if (params->i) {
         /* this case at the moment fits for when only -i is on (make changes according to the struct etc, discuss with ori */
         char* lower_case_haystack = tolower_string(haystack);
