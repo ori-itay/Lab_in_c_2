@@ -7,28 +7,27 @@
 
 struct arguments{
     /* perhaps an int that will represent the arguments: 1 for when only i is on, 2 when only v is on...13 for when i and v is on and so forth. it causes more switch cases but less nested cases..ie. if case==i{ if case==v do: } */
-    int A, NUM, b, c, i, n, v, x, offset;
+    int A, NUM, b, c, i, n, v, x, line_offset;
 };
 
 char* tolower_string(char* string);
 int read_line(FILE* input_stream, char** line);
-void is_match_in_line(char* haystack, char* needle, struct arguments *params, int *line_matched_count, int curr_line_num);
+void is_match_in_line(char* haystack, char* needle, struct arguments *params,
+        int *line_matched_count, int curr_line_num, int char_offset);
 void get_arguments_from_argv(struct arguments *params, FILE **fp, int *num_of_params,char** phrase, int argc, char **argv);
 int report_line_match(char* haystack, char* needle, struct arguments *params);
 
 
-
-
 int main(int argc, char **argv){
     struct arguments params = {0,0,0,0,0,0,0,0,0};
-    int num_of_params, line_matched_count = 0, curr_line_num = 1;
-    char *phrase;
-    char *line;
+    int num_of_params, line_matched_count = 0, curr_line_num = 1, bytes_read, char_offset = 0;
+    char *phrase, *line;
     FILE *fp;
 
     get_arguments_from_argv(&params, &fp, &num_of_params, &phrase, argc, argv);
-    while(read_line(fp, &line) > 0){
-        is_match_in_line(line, phrase, &params, &line_matched_count, curr_line_num++);
+    while( (bytes_read = read_line(fp, &line)) > 0){
+        is_match_in_line(line, phrase, &params, &line_matched_count, curr_line_num++, char_offset);
+        char_offset+= bytes_read;
     }
     if(params.c)
         printf("%d",line_matched_count);
@@ -37,7 +36,7 @@ int main(int argc, char **argv){
 
     /**************************************** testing********************************************/
     read_line(fp, &line);
-    is_match_in_line(line, phrase, &params, &line_matched_count, curr_line_num); // also check this test for file as input xD
+    is_match_in_line(line, phrase, &params, &line_matched_count, curr_line_num, char_offset); // also check this test for file as input xD
 
     /********************************************************************************************/
     return 0;
@@ -57,7 +56,7 @@ int read_line(FILE* input_stream, char** line){
     return bytes_read;
 }
 
-void is_match_in_line(char* haystack, char* needle, struct arguments *params, int *line_matched_count, int curr_line_num){
+void is_match_in_line(char* haystack, char* needle, struct arguments *params, int *line_matched_count, int curr_line_num, int char_offset){
 
     int found;
 
@@ -67,20 +66,26 @@ void is_match_in_line(char* haystack, char* needle, struct arguments *params, in
         if (params->c)
             return;
 
-        if(params->n){
+        if(params->n)
             printf("%d:", curr_line_num);
-        }
+        if(params->b)
+            printf("%d:", char_offset);
         printf("%s", haystack);
 
         if(params->A)
-            params->offset = params->NUM;
+            params->line_offset = params->NUM + 1;
 
     }
-    else if(params->A && params->offset){
-        printf("%d-%s", curr_line_num, haystack);
-        (params->offset)--;
-    }
+    else if(params->A && params->line_offset > 0){
+        printf("%d-", curr_line_num);
+        if(params->b)
+            printf("%d-", char_offset);
+        printf("%s", haystack);
 
+    }
+    else if(params->line_offset == 0)
+        printf("--\n");
+    (params->line_offset)--;
 
     return;
 }
