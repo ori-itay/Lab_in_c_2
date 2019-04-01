@@ -8,16 +8,17 @@
 struct arguments{
     /* perhaps an int that will represent the arguments: 1 for when only i is on, 2 when only v is on...13 for when i and v is on and so forth. it causes more switch cases but less nested cases..ie. if case==i{ if case==v do: } */
     int A, NUM, b, c, i, n, v, x;
+    FILE *fp;
 };
 struct LINE{
     char *line_string_ptr;
     int curr_line_num, char_offset, A_line_offset;
 };
 
+void get_params_from_argv(struct arguments *params, int *num_of_params,char** phrase, int argc, char **argv);
 char* tolower_string(char* string);
-int read_line(FILE* input_stream, char**);
+int read_line(FILE* input_stream, char** line);
 void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count);
-void get_arguments_from_argv(struct arguments *params, FILE **fp, int *num_of_params,char** phrase, int argc, char **argv);
 int is_match(char* haystack, char* needle, int x);
 int report_line_match(char* haystack, char* needle, struct arguments *params);
 
@@ -25,12 +26,19 @@ int report_line_match(char* haystack, char* needle, struct arguments *params);
 int main(int argc, char **argv){
     struct arguments params = {0,0,0,0,0,0,0,0};
     struct LINE line_args = {0,1,0,-1};
-    int num_of_params, line_matched_count = 0, curr_line_num = 1, bytes_read;
-    char *phrase, *line;
-    FILE *fp;
+    int num_of_params, line_matched_count = 0, bytes_read;
+    char *phrase, *line = NULL;
+    size_t line_len = 0;
 
-    get_arguments_from_argv(&params, &fp, &num_of_params, &phrase, argc, argv);
-    while( (bytes_read = read_line(fp, &line)) > 0){
+    get_params_from_argv(&params, &num_of_params, &phrase, argc, argv);
+    while( (bytes_read = getline(&line, &line_len, params.fp)) > 0){
+        if (bytes_read == -1 ){
+            if(errno){
+                printf("End of File or error reading a line!\n");
+                free(line);
+                exit(1);
+            }
+        }
         line_args.line_string_ptr = line;
         is_match_in_line(&line_args, phrase, &params, &line_matched_count);
         line_args.curr_line_num ++;
@@ -39,6 +47,7 @@ int main(int argc, char **argv){
     if(params.c)
         printf("%d",line_matched_count);
 
+    free(line);
     return 0;
 
     /**************************************** testing********************************************/
@@ -52,10 +61,9 @@ int main(int argc, char **argv){
 
 
 int read_line(FILE* input_stream, char** line){
-    size_t len = 0;
-    ssize_t bytes_read;
+    ssize_t bytes_read, line_len = 0;
 
-    bytes_read = getline(line, &len, input_stream);
+    bytes_read = getline(line, line_len, input_stream);
     if (bytes_read == -1 ){
         if(errno){
             printf("End of File or error reading a line!\n");
@@ -90,12 +98,11 @@ void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *pa
         if(params->b)
             printf("%d-", line_args->char_offset);
         printf("%s", haystack);
-
-    }
-    else if(line_args->A_line_offset == 0)
+    }/*
+    else if(line_args->A_line_offset == 0) {
         printf("--\n");
+    }*/
     (line_args->A_line_offset)--;
-
     return;
 }
 
@@ -142,7 +149,7 @@ char* tolower_string(char* string){
     return lowered_string;
 }
 
-void get_arguments_from_argv(struct arguments *params, FILE **fp, int *num_of_params,char** phrase, int argc, char **argv){
+void get_params_from_argv(struct arguments *params, int *num_of_params,char** phrase, int argc, char **argv){
     int ind;
 
     if(argc < 2){
@@ -151,11 +158,11 @@ void get_arguments_from_argv(struct arguments *params, FILE **fp, int *num_of_pa
     }
     else if (argc == 2 || argv[argc-1][0] == '-'){
         //no file entered as argument
-        *fp = STDIN_FILENO;
+        params->fp = stdin;
         *num_of_params = argc - 2;
     }
     else{
-        if( (*fp = fopen(argv[argc-1], "r")) == NULL){  /* problem with relative path!!! */
+        if( (params->fp = fopen(argv[argc-1], "r")) == NULL){  /* problem with relative path!!! */
             printf("Error while opening file. Exiting...\n");
             exit(1);
         }
