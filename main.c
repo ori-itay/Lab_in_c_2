@@ -15,11 +15,12 @@ int read_line(FILE* input_stream, char** line);
 void is_match_in_line(char* haystack, char* needle, struct arguments *params,
         int *line_matched_count, int curr_line_num, int char_offset);
 void get_arguments_from_argv(struct arguments *params, FILE **fp, int *num_of_params,char** phrase, int argc, char **argv);
+int is_match(char* haystack, char* needle, int x);
 int report_line_match(char* haystack, char* needle, struct arguments *params);
 
 
 int main(int argc, char **argv){
-    struct arguments params = {0,0,0,0,0,0,0,0,0};
+    struct arguments params = {0,0,0,0,0,0,0,0,-1};
     int num_of_params, line_matched_count = 0, curr_line_num = 1, bytes_read, char_offset = 0;
     char *phrase, *line;
     FILE *fp;
@@ -57,7 +58,7 @@ int read_line(FILE* input_stream, char** line){
 }
 
 void is_match_in_line(char* haystack, char* needle, struct arguments *params, int *line_matched_count, int curr_line_num, int char_offset){
-
+    
     int found;
 
     if( (found = report_line_match(haystack, needle, params)) ){
@@ -90,22 +91,42 @@ void is_match_in_line(char* haystack, char* needle, struct arguments *params, in
     return;
 }
 
-int report_line_match(char* haystack, char* needle, struct arguments *params){
+int report_line_match(char* haystack, char* needle, struct arguments *params) {
+    int match;
 
-    int match = (strstr(haystack, needle)!= NULL);
+    if (params->x) {
+        match =  (strstr(haystack, needle)!= NULL);
+    }
+    else{
+        match = strcmp(haystack, needle);
+    }
 
     if (params->i) {
         /* this case at the moment fits for when only -i is on (make changes according to the struct etc, discuss with ori */
         char* lower_case_haystack = tolower_string(haystack);
         char* lower_case_needle = tolower_string(needle);
-        match = (strstr(lower_case_haystack, lower_case_needle)!= NULL);
+        match = is_match(lower_case_haystack, lower_case_needle, params->x);
         free(lower_case_haystack); /* in future cases, if the lower case needs to be printed, make sure it is not freed here or print it before this line!! */
         free(lower_case_needle); /* same comment as the line above */
+    }
+    else{
+        match = is_match(haystack, needle, params->x);
     }
 
     match^= params->v;
 
     return match;
+}
+
+int is_match(char* haystack, char* needle, int x){
+    int line_length = strlen(haystack) - 1;//without '\n'
+
+    if (x && line_length) {
+        return (strncmp(haystack, needle, line_length) == 0);
+    }
+    else {
+        return (strstr(haystack, needle)!= NULL);
+    }
 }
 
 
