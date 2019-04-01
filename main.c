@@ -2,81 +2,107 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <unistd.h>
+#include <errno.h>
 
 struct arguments{
     /* perhaps an int that will represent the arguments: 1 for when only i is on, 2 when only v is on...13 for when i and v is on and so forth. it causes more switch cases but less nested cases..ie. if case==i{ if case==v do: } */
+    int A, NUM, b, c, i, n, v, x, offset;
 };
 
 char* tolower_string(char* string);
-void read_line(FILE* input_stream, char** line);
-void is_match_in_line(char* haystack, char* needle, struct arguments args);
-
+int read_line(FILE* input_stream, char** line);
+void is_match_in_line(char* haystack, char* needle, struct arguments *params, int *line_matched_count, int curr_line_num);
+void get_arguments_from_argv(struct arguments *params, FILE **fp, int *num_of_params,char** phrase, int argc, char **argv);
+int report_line_match(char* haystack, char* needle, struct arguments *params);
 
 
 
 
 int main(int argc, char **argv){
-    struct arguments args;
-    char buffer[32];
-    ssize_t  bufsize = 32;
-    ssize_t  characters;
-    int chars_read;
+    struct arguments params = {0,0,0,0,0,0,0,0,0};
+    int num_of_params, line_matched_count = 0, curr_line_num = 1;
     char *phrase;
     char *line;
     FILE *fp;
 
-    phrase = argv[1];
-    if(argc == 2){ /* maybe it can be stdin with more arguments so the test if num of args is 2 isnt correct? */
-        fp = stdin;
+    get_arguments_from_argv(&params, &fp, &num_of_params, &phrase, argc, argv);
+    while(read_line(fp, &line) > 0){
+        is_match_in_line(line, phrase, &params, &line_matched_count, curr_line_num++);
     }
-    else if(argc == 3){ /* can be unlimited num of args so this needs to change probably */
-        if( (fp = fopen(argv[2], "r")) == NULL){
-            printf("Error while opening file. Exiting...\n");
-            exit(1);
-        }
-    }
-    else{
-        printf("Error: wrong number of arguments. Exiting...\n");
-        exit(1);
-    }
+    if(params.c)
+        printf("%d",line_matched_count);
+
+    return 0;
 
     /**************************************** testing********************************************/
     read_line(fp, &line);
-    is_match_in_line(line, phrase, args);
+    is_match_in_line(line, phrase, &params, &line_matched_count, curr_line_num); // also check this test for file as input xD
 
     /********************************************************************************************/
-
+    return 0;
 }
 
 
 
-void read_line(FILE* input_stream, char** line){
+int read_line(FILE* input_stream, char** line){
     size_t len = 0;
     ssize_t bytes_read;
     bytes_read = getline(line, &len, input_stream);
     if (bytes_read == -1 ){
-        printf("End of File or error reading a line!\n");
-        /****** do something (check if errno is set and quit? ***********/
+        if(errno){
+            printf("End of File or error reading a line!\n");
+        }
     }
+    return bytes_read;
 }
 
-void is_match_in_line(char* haystack, char* needle, struct arguments args){
-    char* found;
-    //switch (args){
-     //   case bla : /* this case at the moment fits for when only -i is on (make changes according to the struct etc, discuss with ori */
-      //   {
-            char* lower_case_haystack = tolower_string(haystack);
-            char* lower_case_needle = tolower_string(needle);
-            found = strstr(lower_case_haystack, lower_case_needle);
-            free(lower_case_haystack); /* in future cases, if the lower case needs to be printed, make sure it is not freed here or print it before this line!! */
-            free(lower_case_needle); /* same comment as the line above */
-            if (found!=NULL){ /* if equals null, means not found, else it points to the occurrence .. */
-                printf("%s\n", haystack); /* print the original line, not the lowered case one */
-               // break;
-            }
-        //}
-   // }
+void is_match_in_line(char* haystack, char* needle, struct arguments *params, int *line_matched_count, int curr_line_num){
+
+    int found;
+
+    if( (found = report_line_match(haystack, needle, params)) ){
+
+        (*line_matched_count)++;
+        if (params->c)
+            return;
+
+        if(params->n){
+            printf("%d:", curr_line_num);
+        }
+        printf("%s", haystack);
+
+        if(params->A)
+            params->offset = params->NUM;
+
+    }
+    else if(params->A && params->offset){
+        printf("%d-%s", curr_line_num, haystack);
+        (params->offset)--;
+    }
+
+
+    return;
 }
+
+int report_line_match(char* haystack, char* needle, struct arguments *params){
+
+    int match = (strstr(haystack, needle)!= NULL);
+
+    if (params->i) {
+        /* this case at the moment fits for when only -i is on (make changes according to the struct etc, discuss with ori */
+        char* lower_case_haystack = tolower_string(haystack);
+        char* lower_case_needle = tolower_string(needle);
+        match = (strstr(lower_case_haystack, lower_case_needle)!= NULL);
+        free(lower_case_haystack); /* in future cases, if the lower case needs to be printed, make sure it is not freed here or print it before this line!! */
+        free(lower_case_needle); /* same comment as the line above */
+    }
+
+    match^= params->v;
+
+    return match;
+}
+
 
 char* tolower_string(char* string){
     int index;
@@ -87,4 +113,47 @@ char* tolower_string(char* string){
         lowered_string[index] = tolower(string[index]);
     }
     return lowered_string;
+}
+
+void get_arguments_from_argv(struct arguments *params, FILE **fp, int *num_of_params,char** phrase, int argc, char **argv){
+    int ind;
+
+    if(argc < 2){
+        printf("Error: wrong number of arguments. Exiting...\n");
+        exit(1);
+    }
+    else if (argc == 2 || argv[argc-1][0] == '-'){
+        //no file entered as argument
+        *fp = STDIN_FILENO;
+        *num_of_params = argc - 2;
+    }
+    else{
+        if( (*fp = fopen(argv[argc-1], "r")) == NULL){  /* problem with relative path!!! */
+            printf("Error while opening file. Exiting...\n");
+            exit(1);
+        }
+        *num_of_params = argc - 3;
+    }
+    *phrase = argv[1];
+
+    for(ind = 2; ind<(*num_of_params)+2; ind++){
+        if(strcmp(argv[ind], "-A") == 0){
+            params->A = 1;
+            params->NUM = (int) strtoul(argv[ind+1], NULL, 10);
+            ind++; // pass over next argument
+        }
+        else if(strcmp(argv[ind], "-b") == 0)
+            params->b = 1;
+        else if(strcmp(argv[ind], "-c") == 0)
+            params->c = 1;
+        else if(strcmp(argv[ind], "-i") == 0)
+            params->i = 1;
+        else if(strcmp(argv[ind], "-n") == 0)
+            params->n = 1;
+        else if(strcmp(argv[ind], "-v") == 0)
+            params->v = 1;
+        else if(strcmp(argv[ind], "-x") == 0)
+            params->x = 1;
+    }
+    return;
 }
