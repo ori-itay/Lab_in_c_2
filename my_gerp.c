@@ -6,7 +6,7 @@
 #include <errno.h>
 
 struct arguments{
-    int A, NUM, b, c, i, n, v, x;
+    int A, NUM, b, c, i, n, v, x, E;
     FILE *fp;
 };
 struct LINE{
@@ -19,10 +19,11 @@ char* tolower_string(char* string);
 void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count);
 int is_match(char* haystack, char* needle, int x);
 int report_line_match(char* haystack, char* needle, struct arguments *params);
+char* escaped_chars_modify(char *needle);
 
 
 int main(int argc, char **argv){
-    struct arguments params = {0,0,0,0,0,0,0,0, NULL};
+    struct arguments params = {0,0,0,0,0,0,0,0,0, NULL};
     struct LINE line_args = {0,1,0,-1};
     int line_matched_count = 0, bytes_read;
     char *phrase, *line = NULL;
@@ -101,14 +102,41 @@ int report_line_match(char* haystack, char* needle, struct arguments *params) {
 }
 
 int is_match(char* haystack, char* needle, int x){
-    int line_length = strlen(haystack) - 1;//without '\n'
+    int line_length = strlen(haystack) - 1;/*without '\n'*/
+    int match;
 
-    if (x && line_length) {
-        return (strncmp(haystack, needle, line_length) == 0);
+    char* search_phrase = escaped_chars_modify(needle);
+
+    if (x && line_length)
+        match = (strncmp(haystack, search_phrase, line_length) == 0);
+    else
+        match = (strstr(haystack, search_phrase)!= NULL);
+
+    free(search_phrase);
+
+    return match;
+}
+
+
+char* escaped_chars_modify(char *orig_string){
+    int str_len = strlen(orig_string), orig_ind, mod_ind = 0;
+
+    char* modified_string = (char*)calloc(str_len + 1, sizeof(char));
+    if(modified_string == NULL){
+        printf("Error while allocating memory. exiting...");
+        exit(1);
     }
-    else {
-        return (strstr(haystack, needle)!= NULL);
+    for(orig_ind = 0; orig_ind<str_len; orig_ind++){
+        if(orig_string[orig_ind] != '\\') {
+            modified_string[mod_ind] = orig_string[orig_ind];
+        }
+        else{
+            modified_string[mod_ind] = orig_string[orig_ind+1];
+            orig_ind++;
+        }
+        mod_ind++;
     }
+    return modified_string;
 }
 
 
@@ -116,6 +144,10 @@ char* tolower_string(char* string){
     int index;
     int length = strlen(string);
     char* lowered_string = (char*)calloc(length + 1, sizeof(char));
+    if(lowered_string == NULL){
+        printf("Error while allocating memory. exiting...");
+        exit(1);
+    }
     strncpy(lowered_string, string, length);
     for (index = 0 ; index < length ; index++){
         lowered_string[index] = tolower(string[index]);
@@ -144,7 +176,7 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
         else if(strcmp(argv[ind], "-A") == 0){
             params->A = 1;
             params->NUM = (int) strtoul(argv[ind+1], NULL, 10);
-            ind++; // pass over next argument
+            ind++; /* pass over next argument */
         }
         else if(strcmp(argv[ind], "-b") == 0)
             params->b = 1;
@@ -158,8 +190,12 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
             params->v = 1;
         else if(strcmp(argv[ind], "-x") == 0)
             params->x = 1;
+        else if(strcmp(argv[ind], "-E") == 0){
+            params->E = 1;
+            /*params->REG_EXP = argv[ind+1];*/
+        }
     }
-    if(params->fp == NULL)//no file entered as argument
+    if(params->fp == NULL)/*no file entered as argument*/
         params->fp = stdin;
     return;
 }
