@@ -14,7 +14,7 @@ struct LINE{
     int curr_line_num, char_offset, A_line_offset;
 };
 
-void get_params_from_argv(struct arguments *params, int *num_of_params,char** phrase, int argc, char **argv);
+void get_params_from_argv(struct arguments *params, char** phrase, int argc, char **argv);
 char* tolower_string(char* string);
 void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count);
 int is_match(char* haystack, char* needle, int x);
@@ -22,13 +22,13 @@ int report_line_match(char* haystack, char* needle, struct arguments *params);
 
 
 int main(int argc, char **argv){
-    struct arguments params = {0,0,0,0,0,0,0,0};
+    struct arguments params = {0,0,0,0,0,0,0,0, NULL};
     struct LINE line_args = {0,1,0,-1};
-    int num_of_params, line_matched_count = 0, bytes_read;
+    int line_matched_count = 0, bytes_read;
     char *phrase, *line = NULL;
     size_t line_len = 0;
 
-    get_params_from_argv(&params, &num_of_params, &phrase, argc, argv);
+    get_params_from_argv(&params, &phrase, argc, argv);
     while( (bytes_read = getline(&line, &line_len, params.fp)) > 0){
         if (bytes_read == -1 ){
             if(errno){
@@ -123,29 +123,25 @@ char* tolower_string(char* string){
     return lowered_string;
 }
 
-void get_params_from_argv(struct arguments *params, int *num_of_params,char** phrase, int argc, char **argv){
+void get_params_from_argv(struct arguments *params, char** phrase, int argc, char **argv){
     int ind;
+    *phrase = NULL;
 
     if(argc < 2){
         printf("Error: wrong number of arguments. Exiting...\n");
         exit(1);
     }
-    else if (argc == 2 || argv[argc-1][0] == '-'){
-        //no file entered as argument
-        params->fp = stdin;
-        *num_of_params = argc - 2;
-    }
-    else{
-        if( (params->fp = fopen(argv[argc-1], "r")) == NULL){  /* problem with relative path!!! */
-            printf("Error while opening file. Exiting...\n");
-            exit(1);
-        }
-        *num_of_params = argc - 3;
-    }
-    *phrase = argv[1];
 
-    for(ind = 2; ind<(*num_of_params)+2; ind++){
-        if(strcmp(argv[ind], "-A") == 0){
+    for(ind = 1; ind <argc; ind++){
+        if(argv[ind][0] != '-' && *phrase == NULL)
+            *phrase = argv[ind];
+        else if(ind == argc-1 && argv[ind][0] != '-' && *phrase != NULL){
+            if( (params->fp = fopen(argv[argc-1], "r")) == NULL){
+                printf("Error while opening file. Exiting...\n");
+                exit(1);
+            }
+        }
+        else if(strcmp(argv[ind], "-A") == 0){
             params->A = 1;
             params->NUM = (int) strtoul(argv[ind+1], NULL, 10);
             ind++; // pass over next argument
@@ -163,5 +159,7 @@ void get_params_from_argv(struct arguments *params, int *num_of_params,char** ph
         else if(strcmp(argv[ind], "-x") == 0)
             params->x = 1;
     }
+    if(params->fp == NULL)//no file entered as argument
+        params->fp = stdin;
     return;
 }
