@@ -127,7 +127,7 @@ int is_match_in_line(char* haystack, char* needle, struct arguments *params, phr
             match = is_match_at_place(haystack, needle, component_index, components_list, components_count, params);
     }
     else{
-        for(haystack_index; haystack_index<haystack_len; haystack_index++){
+        for(; haystack_index<haystack_len; haystack_index++){
             if( (match = is_match_at_place(haystack+haystack_index, needle, component_index, components_list, components_count, params)) )
                 break;
         }
@@ -155,6 +155,7 @@ int parse_line(char *orig_string, phrase_component** components_list){
         else if(orig_string[string_index] == '['){
             (*components_list)[component_index].type = SQUARED_BRACKETS;
             (*components_list)[component_index].range_start = orig_string[string_index+RANGE_START_OFFSET];
+            //while (orig_string[++string_index] != ']') {}
             string_index+= RANGE_END_OFFSET;
             (*components_list)[component_index].range_end = orig_string[string_index];
             string_index++;
@@ -197,7 +198,7 @@ int is_match_at_place(char* haystack, char* needle, int component_index, phrase_
             while (needle[++current_string_index] != '|' && current_string_index < component_end_index) {
                 compare_length++;}
             if (strncmp(needle + current_string_index-compare_length, haystack, compare_length) == 0)
-                match = is_match_at_place(haystack + component_end_index, needle, component_index + 1, component_list,
+                match = is_match_at_place(haystack + 1, needle, component_index + 1, component_list,
                                           component_count, params);
             compare_length = 0;
         }
@@ -246,7 +247,7 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
         else if(strcmp(argv[ind], "-A") == 0){
             params->A = 1;
             params->NUM = (int) strtoul(argv[ind+1], NULL, 10);
-            ind++; // pass over next argument
+            ind++;
         }
         else if(strcmp(argv[ind], "-b") == 0)
             params->b = 1;
@@ -264,7 +265,7 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
             params->E = 1;
         }
     }
-    if(params->fp == NULL)//no file entered as argument
+    if(params->fp == NULL)
         params->fp = stdin;
     return;
 }
