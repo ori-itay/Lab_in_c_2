@@ -77,6 +77,7 @@ int main(int argc, char **argv){
         free(phrase);
     free(components_list);
     free(line);
+    fclose(params.fp);
     return 0;
 }
 
@@ -127,7 +128,7 @@ int is_match_in_line(char* haystack, char* needle, struct arguments *params, phr
             match = is_match_at_place(haystack, needle, component_index, components_list, components_count, params);
     }
     else{
-        for(haystack_index; haystack_index<haystack_len-components_count; haystack_index++){
+        for(haystack_index; haystack_index<haystack_len; haystack_index++){
             if( (match = is_match_at_place(haystack+haystack_index, needle, component_index, components_list, components_count, params)) )
                 break;
         }
@@ -200,6 +201,8 @@ int is_match_at_place(char* haystack, char* needle, int component_index, phrase_
             match = is_match_at_place(haystack+str1_len, needle, component_index+1, component_list, component_count, params);
         if(match == 0 && strncmp(str_2,haystack,str2_len) == 0)
             match = is_match_at_place(haystack+str2_len, needle, component_index+1, component_list, component_count, params);
+        if(match == 0 && (str1_len == 0 || str2_len == 0) )
+            match = is_match_at_place(haystack, needle, component_index+1, component_list, component_count, params);
     }
 
     else{
