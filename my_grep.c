@@ -35,8 +35,9 @@ typedef struct PHRASE_COMPONENT{
 
 void get_params_from_argv(struct arguments *params, char** phrase, int argc, char **argv);
 char* tolower_string(char* string);
-void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count);
-int is_match_in_line(char* haystack, char* needle, struct arguments *params);
+void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count,
+        phrase_component *components_list, int components_count);
+int is_match_in_line(char* haystack, char* needle, struct arguments *params, phrase_component *components_list, int components_count);
 int is_match_at_place(char* haystack, int component_index, phrase_component* component_list, int component_count, struct arguments *params);
 int parse_line(char *orig_string, phrase_component** component_list);
 //char* backslash_remove(char *needle);
@@ -45,11 +46,20 @@ int parse_line(char *orig_string, phrase_component** component_list);
 int main(int argc, char **argv){
     struct arguments params = {0,0,0,0,0,0,0,0,0, NULL};
     struct LINE line_args = {0,1,0,-1};
-    int line_matched_count = 0, bytes_read;
+    int line_matched_count = 0, bytes_read, components_count = 0;
     char *phrase, *line = NULL;
     size_t line_len = 0;
+    phrase_component* components_list;
 
     get_params_from_argv(&params, &phrase, argc, argv);
+    if(params.i) {
+        phrase = tolower_string(phrase);
+    }
+    if( (components_list = (phrase_component*)calloc(strlen(phrase), sizeof(phrase_component)) ) == NULL){
+        printf("Error while allocating memory. exiting...\n");
+        exit(1);
+    }
+    components_count = parse_line(phrase, &components_list);
     while( (bytes_read = getline(&line, &line_len, params.fp)) > 0){
         if (bytes_read == -1 ){
             if(errno){
@@ -59,24 +69,27 @@ int main(int argc, char **argv){
             }
         }
         line_args.line_string_ptr = line;
-        report_line_match(&line_args, phrase, &params, &line_matched_count);
+        report_line_match(&line_args, phrase, &params, &line_matched_count, components_list, components_count);
         line_args.curr_line_num ++;
         line_args.char_offset+= bytes_read;
     }
     if(params.c)
         printf("%d\n",line_matched_count);
-
+    if(params.i)
+        free(phrase);
+    free(components_list);
     free(line);
     return 0;
 }
 
 
-void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count){
+void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count,
+                       phrase_component *components_list, int components_count){
 
     int match;
     char *haystack = line_args->line_string_ptr;
 
-    if( (match = is_match_in_line(haystack, needle, params)) ){
+    if( (match = is_match_in_line(haystack, needle, params, components_list, components_count)) ){
 
         (*line_matched_count)++;
         if (params->c)
@@ -105,48 +118,30 @@ void report_line_match(struct LINE *line_args, char* needle, struct arguments *p
     return;
 }
 
-int is_match_in_line(char* haystack, char* needle, struct arguments *params) {
-    int match = 0, needle_len = strlen(needle), haystack_len = (strlen(haystack)), components_count,
-    component_index = 0, haystack_index = 0;
-    char *to_check_needle, *to_check_haystack;
-
-    phrase_component* components_list = (phrase_component*)calloc(needle_len, sizeof(struct PHRASE_COMPONENT));
+int is_match_in_line(char* haystack, char* needle, struct arguments *params, phrase_component *components_list, int components_count) {
+    int match = 0, needle_len = strlen(needle), haystack_len = (strlen(haystack)), component_index = 0, haystack_index = 0;
 
     if (params->i) {
-        char* to_check_haystack = tolower_string(haystack);
-        char* to_check_needle = tolower_string(needle);
+        haystack = tolower_string(haystack);
     }
-    else{
-        to_check_haystack = haystack;
-        to_check_needle = needle;
-    }
-    components_count = parse_line(to_check_needle, &components_list);
     if(params->x)
-        match = is_match_at_place(to_check_haystack, component_index, components_list, components_count, params);
+        match = is_match_at_place(haystack, component_index, components_list, components_count, params);
     else{
         for(haystack_index; haystack_index<haystack_len-needle_len; haystack_index++){
-            if( (match = is_match_at_place(to_check_haystack+haystack_index, component_index, components_list, components_count, params)) )
+            if( (match = is_match_at_place(haystack+haystack_index, component_index, components_list, components_count, params)) )
                 break;
         }
     }
     match^= params->v;
 
-    if(params->i){
-        free(to_check_haystack);
-        free(to_check_needle);
-    }
-    free(components_list);
+    if(params->i)
+        free(haystack);
     return match;
 }
 
 int parse_line(char *orig_string, phrase_component** components_list){
 
     int str_len = strlen(orig_string), string_index, component_index = 0;
-
-    if(components_list == NULL){
-        printf("Error while allocating memory. exiting...\n");
-        exit(1);
-    }
 
     for(string_index = 0; string_index<str_len; string_index++){
         if(orig_string[string_index] == '.') {
@@ -244,15 +239,12 @@ int is_match_at_place(char* haystack, int component_index, phrase_component* com
 }
 
 
-
-
-
 char* tolower_string(char* string){
     int index;
     int length = strlen(string);
     char* lowered_string = (char*)calloc(length + 1, sizeof(char));
     if(lowered_string == NULL){
-        printf("Error while allocating memory. exiting...");
+        printf("Error while allocating memory. exiting...\n");
         exit(1);
     }
     strncpy(lowered_string, string, length);
