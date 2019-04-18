@@ -38,7 +38,7 @@ char* tolower_string(char* string);
 void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count,
         phrase_component *components_list, int components_count);
 int is_match_in_line(char* haystack, char* needle, struct arguments *params, phrase_component *components_list, int components_count);
-int is_match_at_place(char* haystack, int component_index, phrase_component* component_list, int component_count, struct arguments *params);
+int is_match_at_place(char* haystack, char* needle, int component_index, phrase_component* component_list, int component_count, struct arguments *params);
 int parse_line(char *orig_string, phrase_component** component_list);
 //char* backslash_remove(char *needle);
 
@@ -124,11 +124,11 @@ int is_match_in_line(char* haystack, char* needle, struct arguments *params, phr
     }
     if(params->x) {
         if(needle_len == haystack_len-1)
-            match = is_match_at_place(haystack, component_index, components_list, components_count, params);
+            match = is_match_at_place(haystack, needle, component_index, components_list, components_count, params);
     }
     else{
         for(haystack_index; haystack_index<haystack_len-components_count; haystack_index++){
-            if( (match = is_match_at_place(haystack+haystack_index, component_index, components_list, components_count, params)) )
+            if( (match = is_match_at_place(haystack+haystack_index, needle, component_index, components_list, components_count, params)) )
                 break;
         }
     }
@@ -176,10 +176,10 @@ int parse_line(char *orig_string, phrase_component** components_list){
 }
 
 
-int is_match_at_place(char* haystack, int component_index, phrase_component* component_list,
+int is_match_at_place(char* haystack, char* needle, int component_index, phrase_component* component_list,
         int component_count, struct arguments *params){
     //int line_length = strlen(haystack) - 1;//without '\n'
-    int match;
+    int match = 0;
 
     if(component_index >= component_count) {
         match = TRUE;
@@ -189,10 +189,21 @@ int is_match_at_place(char* haystack, int component_index, phrase_component* com
             component_list[component_index].type == DOT ||
             (component_list[component_index].type == SQUARED_BRACKETS && component_list[component_index].range_start <= haystack[0]
              && component_list[component_index].range_end >= haystack[0]) ){
-        return is_match_at_place(haystack+1, component_index+1, component_list, component_count, params);
+        match = is_match_at_place(haystack+1, needle, component_index+1, component_list, component_count, params);
     }
+    else if( component_list[component_index].type == CIRCULAR_BRACKETS){
+        char *str_1 = needle+component_list[component_index].str1_index;
+        int str1_len = component_list[component_index].str1_len;
+        char *str_2 = needle+component_list[component_index].str2_index;
+        int str2_len = component_list[component_index].str2_len;
+        if(strncmp(str_1,haystack,str1_len) == 0)
+            match = is_match_at_place(haystack+str1_len, needle, component_index+1, component_list, component_count, params);
+        if(match == 0 && strncmp(str_2,haystack,str2_len) == 0)
+            match = is_match_at_place(haystack+str2_len, needle, component_index+1, component_list, component_count, params);
+    }
+
     else{
-        return FALSE;
+        match = FALSE;
     }
     return match;
 }
