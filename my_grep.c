@@ -5,6 +5,11 @@
 #include <unistd.h>
 #include <errno.h>
 
+#define TRUE 1
+#define FALSE 0
+#define RANGE_START_OFFSET 1
+#define RANGE_END_OFFSET 3
+
 struct arguments{
     int A, NUM, b, c, i, n, v, x, E;
     FILE *fp;
@@ -13,13 +18,29 @@ struct LINE{
     char *line_string_ptr;
     int curr_line_num, char_offset, A_line_offset;
 };
+typedef enum component_type{
+REGULAR_CHAR,
+ESCAPE_BACKSLASH,
+DOT,
+SQUARED_BRACKETS,
+CIRCULAR_BRACKETS
+} component_type;
+
+typedef struct PHRASE_COMPONENT{
+    component_type type;
+    int range_start, range_end, str1_index, str2_index, str1_len, str2_len;
+    char checked_char;
+} phrase_component;
+
 
 void get_params_from_argv(struct arguments *params, char** phrase, int argc, char **argv);
 char* tolower_string(char* string);
-void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count);
-int is_match(char* haystack, char* needle, int x);
-int report_line_match(char* haystack, char* needle, struct arguments *params);
-char* escaped_chars_modify(char *needle);
+void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count);
+int is_match_in_line(char* haystack, char* needle, struct arguments *params);
+int is_match_at_place(int haystack_index, char* haystack, int component_index,
+        phrase_component* component_list, int component_count, struct arguments *params);
+int parse_line(char *orig_string, phrase_component** component_list);
+//char* backslash_remove(char *needle);
 
 
 int main(int argc, char **argv){
@@ -39,24 +60,24 @@ int main(int argc, char **argv){
             }
         }
         line_args.line_string_ptr = line;
-        is_match_in_line(&line_args, phrase, &params, &line_matched_count);
+        report_line_match(&line_args, phrase, &params, &line_matched_count);
         line_args.curr_line_num ++;
         line_args.char_offset+= bytes_read;
     }
     if(params.c)
-         printf("%d\n",line_matched_count);
+        printf("%d\n",line_matched_count);
 
     free(line);
     return 0;
 }
 
 
-void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count){
+void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count){
 
-    int found;
+    int match;
     char *haystack = line_args->line_string_ptr;
 
-    if( (found = report_line_match(haystack, needle, params)) ){
+    if( (match = is_match_in_line(haystack, needle, params)) ){
 
         (*line_matched_count)++;
         if (params->c)
@@ -73,57 +94,99 @@ void is_match_in_line(struct LINE *line_args, char* needle, struct arguments *pa
 
     }
     else if(params->A && line_args->A_line_offset > 0){
-        printf("%d-", line_args->curr_line_num);
+        if(params->n)
+            printf("%d-", line_args->curr_line_num);
         if(params->b)
             printf("%d-", line_args->char_offset);
         printf("%s", haystack);
     }
     (line_args->A_line_offset)--;
+    if(line_args->A_line_offset == -1 && params->fp != stdin)
+        printf("--\n");
     return;
 }
 
-int report_line_match(char* haystack, char* needle, struct arguments *params) {
-    int match;
+int is_match_in_line(char* haystack, char* needle, struct arguments *params) {
+    int match, needle_len = strlen(needle), haystack_len = (strlen(haystack)), components_count,
+    component_index = 0, haystack_index = 0;
+    char *to_check_needle, *to_check_haystack;
+
+    phrase_component* components_list = (phrase_component*)calloc(needle_len, sizeof(struct PHRASE_COMPONENT));
 
     if (params->i) {
-        char* lower_case_haystack = tolower_string(haystack);
-        char* lower_case_needle = tolower_string(needle);
-        match = is_match(lower_case_haystack, lower_case_needle, params->x);
-        free(lower_case_haystack);
-        free(lower_case_needle);
+        char* to_check_haystack = tolower_string(haystack);
+        char* to_check_needle = tolower_string(needle);
     }
     else{
-        match = is_match(haystack, needle, params->x);
+        to_check_haystack = haystack;
+        to_check_needle = needle;
     }
-
+    components_count = parse_line(to_check_needle, &components_list);
+    if(params->x)
+        match = is_match_at_place(haystack_index, to_check_haystack, component_index, components_list, components_count, params);
+    else{
+        for(haystack_index; haystack_index<haystack_len-needle_len; haystack_index++){
+            if( (match = is_match_at_place(haystack_index, to_check_haystack, component_index, components_list, components_count, params)) )
+                break;
+        }
+    }
     match^= params->v;
 
+    if(params->i){
+        free(to_check_haystack);
+        free(to_check_needle);
+    }
+    free(components_list);
     return match;
 }
 
-int is_match(char* haystack, char* needle, int x){
-    int line_length = strlen(haystack) - 1;/*without '\n'*/
-    int match;
+int parse_line(char *orig_string, phrase_component** components_list){
 
-    char* search_phrase = escaped_chars_modify(needle);
+    int str_len = strlen(orig_string), string_index, component_index = 0;
 
-    if (x && line_length)
-        match = (strncmp(haystack, search_phrase, line_length) == 0);
-    else
-        match = (strstr(haystack, search_phrase)!= NULL);
+    if(components_list == NULL){
+        printf("Error while allocating memory. exiting...\n");
+        exit(1);
+    }
 
-    free(search_phrase);
-
-    return match;
+    for(string_index = 0; string_index<str_len; string_index++){
+        if(orig_string[string_index] == '.') {
+            (*components_list)[component_index].type = DOT;
+        }
+        else if(orig_string[string_index] == '\\'){
+            string_index++;
+            (*components_list)[component_index].type = ESCAPE_BACKSLASH;
+            (*components_list)[component_index].checked_char = orig_string[string_index];
+        }
+        else if(orig_string[string_index] == '['){
+            (*components_list)[component_index].type = SQUARED_BRACKETS;
+            (*components_list)[component_index].range_start = orig_string[string_index+RANGE_START_OFFSET];
+            string_index+= RANGE_END_OFFSET;
+            (*components_list)[component_index].range_end = orig_string[string_index];
+        }
+        else if(orig_string[string_index] == '(') {
+            (*components_list)[component_index].type = CIRCULAR_BRACKETS;
+            (*components_list)[component_index].str1_index = string_index + 1;
+            while (orig_string[++string_index] != '|') { (*components_list)[component_index].str1_len++; }
+            (*components_list)[component_index].str2_index = string_index + 1;
+            while (orig_string[++string_index] != ')') { (*components_list)[component_index].str2_len++; }
+        }
+        else{
+            (*components_list)[component_index].type = REGULAR_CHAR;
+            (*components_list)[component_index].checked_char = orig_string[string_index];
+        }
+        component_index++;
+    }
+    return component_index;
 }
 
-
-char* escaped_chars_modify(char *orig_string){
+/*
+char* backslash_remove(char *orig_string){
     int str_len = strlen(orig_string), orig_ind, mod_ind = 0;
 
     char* modified_string = (char*)calloc(str_len + 1, sizeof(char));
     if(modified_string == NULL){
-        printf("Error while allocating memory. exiting...");
+        printf("Error while allocating memory. exiting...\n");
         exit(1);
     }
     for(orig_ind = 0; orig_ind<str_len; orig_ind++){
@@ -138,6 +201,51 @@ char* escaped_chars_modify(char *orig_string){
     }
     return modified_string;
 }
+*/
+
+int is_match_at_place(int haystack_index, char* haystack, int component_index, phrase_component* component_list,
+        int component_count, struct arguments *params){
+    //int line_length = strlen(haystack) - 1;//without '\n'
+    int match;
+
+    if(component_index > component_count) {
+        match = TRUE;
+    }
+    else if(component_list[component_index].type == REGULAR_CHAR &&
+    component_list[component_count].checked_char == haystack[component_index]){
+        return is_match_at_place(haystack_index+1, haystack+1, component_index+1, component_list, component_count, params);
+    }
+    else{
+        return FALSE;
+    }
+
+    /*
+
+    if(params->E){
+        if(index > strlen(needle)) {
+            match = TRUE;
+        }
+        else if(needle[index] == haystack[index] || needle[index] == '.'){
+            match = is_match_at_place(++index, haystack, needle, params);
+        }
+        else if(needle){
+
+        }
+        else{
+            match = FALSE;
+        }
+    }
+    else if (params->x && line_length)
+        match = (strncmp(haystack, needle, line_length) == 0);
+    else
+        match = (strstr(haystack, needle)!= NULL);
+    */
+
+    return match;
+}
+
+
+
 
 
 char* tolower_string(char* string){
@@ -176,7 +284,7 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
         else if(strcmp(argv[ind], "-A") == 0){
             params->A = 1;
             params->NUM = (int) strtoul(argv[ind+1], NULL, 10);
-            ind++; /* pass over next argument */
+            ind++; // pass over next argument
         }
         else if(strcmp(argv[ind], "-b") == 0)
             params->b = 1;
@@ -192,10 +300,10 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
             params->x = 1;
         else if(strcmp(argv[ind], "-E") == 0){
             params->E = 1;
-            /*params->REG_EXP = argv[ind+1];*/
+            //params->REG_EXP = argv[ind+1];
         }
     }
-    if(params->fp == NULL)/*no file entered as argument*/
+    if(params->fp == NULL)//no file entered as argument
         params->fp = stdin;
     return;
 }
