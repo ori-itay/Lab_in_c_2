@@ -28,7 +28,7 @@ CIRCULAR_BRACKETS
 
 typedef struct PHRASE_COMPONENT{
     component_type type;
-    int range_start, range_end, str1_index, str2_index, str1_len, str2_len;
+    int range_start, range_end, start_index_in_phrase, end_index_in_phrase;
     char checked_char;
 } phrase_component;
 
@@ -40,7 +40,6 @@ void report_line_match(struct LINE *line_args, char* needle, struct arguments *p
 int is_match_in_line(char* haystack, char* needle, struct arguments *params, phrase_component *components_list, int components_count);
 int is_match_at_place(char* haystack, char* needle, int component_index, phrase_component* component_list, int component_count, struct arguments *params);
 int parse_line(char *orig_string, phrase_component** component_list);
-//char* backslash_remove(char *needle);
 
 
 int main(int argc, char **argv){
@@ -162,10 +161,9 @@ int parse_line(char *orig_string, phrase_component** components_list){
         }
         else if(orig_string[string_index] == '(') {
             (*components_list)[component_index].type = CIRCULAR_BRACKETS;
-            (*components_list)[component_index].str1_index = string_index + 1;
-            while (orig_string[++string_index] != '|') { (*components_list)[component_index].str1_len++; }
-            (*components_list)[component_index].str2_index = string_index + 1;
-            while (orig_string[++string_index] != ')') { (*components_list)[component_index].str2_len++; }
+            (*components_list)[component_index].start_index_in_phrase = string_index;
+            while (orig_string[++string_index] != ')') {}
+            (*components_list)[component_index].end_index_in_phrase = string_index;
         }
         else{
             (*components_list)[component_index].type = REGULAR_CHAR;
@@ -179,8 +177,8 @@ int parse_line(char *orig_string, phrase_component** components_list){
 
 int is_match_at_place(char* haystack, char* needle, int component_index, phrase_component* component_list,
         int component_count, struct arguments *params){
-    //int line_length = strlen(haystack) - 1;//without '\n'
-    int match = 0;
+
+    int match = 0, current_string_index, compare_length = 0, component_end_index;
 
     if(component_index >= component_count) {
         match = TRUE;
@@ -193,16 +191,16 @@ int is_match_at_place(char* haystack, char* needle, int component_index, phrase_
         match = is_match_at_place(haystack+1, needle, component_index+1, component_list, component_count, params);
     }
     else if( component_list[component_index].type == CIRCULAR_BRACKETS){
-        char *str_1 = needle+component_list[component_index].str1_index;
-        int str1_len = component_list[component_index].str1_len;
-        char *str_2 = needle+component_list[component_index].str2_index;
-        int str2_len = component_list[component_index].str2_len;
-        if(strncmp(str_1,haystack,str1_len) == 0)
-            match = is_match_at_place(haystack+str1_len, needle, component_index+1, component_list, component_count, params);
-        if(match == 0 && strncmp(str_2,haystack,str2_len) == 0)
-            match = is_match_at_place(haystack+str2_len, needle, component_index+1, component_list, component_count, params);
-        if(match == 0 && (str1_len == 0 || str2_len == 0) )
-            match = is_match_at_place(haystack, needle, component_index+1, component_list, component_count, params);
+        current_string_index = component_list[component_index].start_index_in_phrase;
+        component_end_index = component_list[component_index].end_index_in_phrase;
+        while(current_string_index < component_end_index) {
+            while (needle[++current_string_index] != '|' && current_string_index < component_end_index) {
+                compare_length++;}
+            if (strncmp(needle + current_string_index-compare_length, haystack, compare_length) == 0)
+                match = is_match_at_place(haystack + component_end_index, needle, component_index + 1, component_list,
+                                          component_count, params);
+            compare_length = 0;
+        }
     }
 
     else{
