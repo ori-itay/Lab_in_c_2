@@ -89,6 +89,9 @@ void report_line_match(struct LINE *line_args, char* needle, struct arguments *p
 
     if( (match = is_match_in_line(haystack, needle, params, components_list, components_count)) ){
 
+        if(line_args->A_line_offset == 0)
+            printf("--\n");
+
         (*line_matched_count)++;
         if (params->c)
             return;
@@ -100,7 +103,7 @@ void report_line_match(struct LINE *line_args, char* needle, struct arguments *p
         printf("%s", haystack);
 
         if(params->A)
-            line_args->A_line_offset = params->NUM + 1;
+            line_args->A_line_offset = params->NUM;
 
     }
     else if(params->A && line_args->A_line_offset > 0){
@@ -109,10 +112,9 @@ void report_line_match(struct LINE *line_args, char* needle, struct arguments *p
         if(params->b)
             printf("%d-", line_args->char_offset);
         printf("%s", haystack);
+        if(line_args->A_line_offset > 0)
+            (line_args->A_line_offset)--;
     }
-    (line_args->A_line_offset)--;
-    if(line_args->A_line_offset == -1 && params->fp != stdin)
-        printf("--\n");
     return;
 }
 
@@ -155,7 +157,6 @@ int parse_line(char *orig_string, phrase_component** components_list){
         else if(orig_string[string_index] == '['){
             (*components_list)[component_index].type = SQUARED_BRACKETS;
             (*components_list)[component_index].range_start = orig_string[string_index+RANGE_START_OFFSET];
-            //while (orig_string[++string_index] != ']') {}
             string_index+= RANGE_END_OFFSET;
             (*components_list)[component_index].range_end = orig_string[string_index];
             string_index++;
@@ -198,9 +199,10 @@ int is_match_at_place(char* haystack, char* needle, int component_index, phrase_
             while (needle[++current_string_index] != '|' && current_string_index < component_end_index) {
                 compare_length++;}
             if (strncmp(needle + current_string_index-compare_length, haystack, compare_length) == 0)
-                match = is_match_at_place(haystack + 1, needle, component_index + 1, component_list,
-                                          component_count, params);
+                match = is_match_at_place(haystack + compare_length, needle, component_index + 1, component_list, component_count, params);
             compare_length = 0;
+            if(match)
+                break;
         }
     }
 
