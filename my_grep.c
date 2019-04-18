@@ -37,8 +37,7 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
 char* tolower_string(char* string);
 void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count);
 int is_match_in_line(char* haystack, char* needle, struct arguments *params);
-int is_match_at_place(int haystack_index, char* haystack, int component_index,
-        phrase_component* component_list, int component_count, struct arguments *params);
+int is_match_at_place(char* haystack, int component_index, phrase_component* component_list, int component_count, struct arguments *params);
 int parse_line(char *orig_string, phrase_component** component_list);
 //char* backslash_remove(char *needle);
 
@@ -107,7 +106,7 @@ void report_line_match(struct LINE *line_args, char* needle, struct arguments *p
 }
 
 int is_match_in_line(char* haystack, char* needle, struct arguments *params) {
-    int match, needle_len = strlen(needle), haystack_len = (strlen(haystack)), components_count,
+    int match = 0, needle_len = strlen(needle), haystack_len = (strlen(haystack)), components_count,
     component_index = 0, haystack_index = 0;
     char *to_check_needle, *to_check_haystack;
 
@@ -123,10 +122,10 @@ int is_match_in_line(char* haystack, char* needle, struct arguments *params) {
     }
     components_count = parse_line(to_check_needle, &components_list);
     if(params->x)
-        match = is_match_at_place(haystack_index, to_check_haystack, component_index, components_list, components_count, params);
+        match = is_match_at_place(to_check_haystack, component_index, components_list, components_count, params);
     else{
         for(haystack_index; haystack_index<haystack_len-needle_len; haystack_index++){
-            if( (match = is_match_at_place(haystack_index, to_check_haystack, component_index, components_list, components_count, params)) )
+            if( (match = is_match_at_place(to_check_haystack+haystack_index, component_index, components_list, components_count, params)) )
                 break;
         }
     }
@@ -203,17 +202,17 @@ char* backslash_remove(char *orig_string){
 }
 */
 
-int is_match_at_place(int haystack_index, char* haystack, int component_index, phrase_component* component_list,
+int is_match_at_place(char* haystack, int component_index, phrase_component* component_list,
         int component_count, struct arguments *params){
     //int line_length = strlen(haystack) - 1;//without '\n'
     int match;
 
-    if(component_index > component_count) {
+    if(component_index >= component_count) {
         match = TRUE;
     }
     else if(component_list[component_index].type == REGULAR_CHAR &&
-    component_list[component_count].checked_char == haystack[component_index]){
-        return is_match_at_place(haystack_index+1, haystack+1, component_index+1, component_list, component_count, params);
+            component_list[component_index].checked_char == haystack[0]){
+        return is_match_at_place(haystack+1, component_index+1, component_list, component_count, params);
     }
     else{
         return FALSE;
