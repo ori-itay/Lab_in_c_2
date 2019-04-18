@@ -53,20 +53,18 @@ int main(int argc, char **argv){
 
     get_params_from_argv(&params, &phrase, argc, argv);
     if(params.i) {
-        phrase = tolower_string(phrase);
-    }
+        phrase = tolower_string(phrase);}
     if( (components_list = (phrase_component*)calloc(strlen(phrase), sizeof(phrase_component)) ) == NULL){
         printf("Error while allocating memory. exiting...\n");
-        exit(1);
-    }
+        exit(1);}
+
     components_count = parse_line(phrase, &components_list);
     while( (bytes_read = getline(&line, &line_len, params.fp)) > 0){
         if (bytes_read == -1 ){
             if(errno){
                 printf("End of File or error reading a line!\n");
                 free(line);
-                exit(1);
-            }
+                exit(1);}
         }
         line_args.line_string_ptr = line;
         report_line_match(&line_args, phrase, &params, &line_matched_count, components_list, components_count);
@@ -86,7 +84,7 @@ int main(int argc, char **argv){
 void report_line_match(struct LINE *line_args, char* needle, struct arguments *params, int *line_matched_count,
                        phrase_component *components_list, int components_count){
 
-    int match;
+    int match = 0;
     char *haystack = line_args->line_string_ptr;
 
     if( (match = is_match_in_line(haystack, needle, params, components_list, components_count)) ){
@@ -124,10 +122,12 @@ int is_match_in_line(char* haystack, char* needle, struct arguments *params, phr
     if (params->i) {
         haystack = tolower_string(haystack);
     }
-    if(params->x)
-        match = is_match_at_place(haystack, component_index, components_list, components_count, params);
+    if(params->x) {
+        if(needle_len == haystack_len-1)
+            match = is_match_at_place(haystack, component_index, components_list, components_count, params);
+    }
     else{
-        for(haystack_index; haystack_index<haystack_len-needle_len; haystack_index++){
+        for(haystack_index; haystack_index<haystack_len-components_count; haystack_index++){
             if( (match = is_match_at_place(haystack+haystack_index, component_index, components_list, components_count, params)) )
                 break;
         }
@@ -157,6 +157,7 @@ int parse_line(char *orig_string, phrase_component** components_list){
             (*components_list)[component_index].range_start = orig_string[string_index+RANGE_START_OFFSET];
             string_index+= RANGE_END_OFFSET;
             (*components_list)[component_index].range_end = orig_string[string_index];
+            string_index++;
         }
         else if(orig_string[string_index] == '(') {
             (*components_list)[component_index].type = CIRCULAR_BRACKETS;
@@ -174,28 +175,6 @@ int parse_line(char *orig_string, phrase_component** components_list){
     return component_index;
 }
 
-/*
-char* backslash_remove(char *orig_string){
-    int str_len = strlen(orig_string), orig_ind, mod_ind = 0;
-
-    char* modified_string = (char*)calloc(str_len + 1, sizeof(char));
-    if(modified_string == NULL){
-        printf("Error while allocating memory. exiting...\n");
-        exit(1);
-    }
-    for(orig_ind = 0; orig_ind<str_len; orig_ind++){
-        if(orig_string[orig_ind] != '\\') {
-            modified_string[mod_ind] = orig_string[orig_ind];
-        }
-        else{
-            modified_string[mod_ind] = orig_string[orig_ind+1];
-            orig_ind++;
-        }
-        mod_ind++;
-    }
-    return modified_string;
-}
-*/
 
 int is_match_at_place(char* haystack, int component_index, phrase_component* component_list,
         int component_count, struct arguments *params){
@@ -205,36 +184,16 @@ int is_match_at_place(char* haystack, int component_index, phrase_component* com
     if(component_index >= component_count) {
         match = TRUE;
     }
-    else if(component_list[component_index].type == REGULAR_CHAR &&
-            component_list[component_index].checked_char == haystack[0]){
+    else if( ( (component_list[component_index].type == REGULAR_CHAR || component_list[component_index].type == ESCAPE_BACKSLASH) &&
+            component_list[component_index].checked_char == haystack[0] ) ||
+            component_list[component_index].type == DOT ||
+            (component_list[component_index].type == SQUARED_BRACKETS && component_list[component_index].range_start <= haystack[0]
+             && component_list[component_index].range_end >= haystack[0]) ){
         return is_match_at_place(haystack+1, component_index+1, component_list, component_count, params);
     }
     else{
         return FALSE;
     }
-
-    /*
-
-    if(params->E){
-        if(index > strlen(needle)) {
-            match = TRUE;
-        }
-        else if(needle[index] == haystack[index] || needle[index] == '.'){
-            match = is_match_at_place(++index, haystack, needle, params);
-        }
-        else if(needle){
-
-        }
-        else{
-            match = FALSE;
-        }
-    }
-    else if (params->x && line_length)
-        match = (strncmp(haystack, needle, line_length) == 0);
-    else
-        match = (strstr(haystack, needle)!= NULL);
-    */
-
     return match;
 }
 
@@ -291,7 +250,6 @@ void get_params_from_argv(struct arguments *params, char** phrase, int argc, cha
             params->x = 1;
         else if(strcmp(argv[ind], "-E") == 0){
             params->E = 1;
-            //params->REG_EXP = argv[ind+1];
         }
     }
     if(params->fp == NULL)//no file entered as argument
