@@ -8,14 +8,15 @@
 #define TRUE 1
 #define FALSE 0
 #define INCREMENT_1 1
-#define RANGE_START_OFFSET 1
-#define RANGE_END_OFFSET 3
+#define DECREMENT_1 -1
 #define DECIMAL_BASE 10
 #define BACKSLASH '\\'
 #define LEFT_SQUARE_BRACKET '['
+#define RIGHT_SQUARE_BRACKET ']'
 #define LEFT_ROUND_BRACKET '('
 #define RIGHT_ROUND_BRACKET ')'
 #define OR_CHAR '|'
+#define HYPHEN_CHAR '-'
 
 typedef struct program_arguments {
   int A, NUM, b, c, i, n, v, x, E;
@@ -49,8 +50,8 @@ int is_match_in_line(char *haystack, program_arguments *parameters, regex_compon
                      int components_count);
 int is_match_at_place(char *haystack, int component_index, regex_component *component_list, int component_count,
                       program_arguments *parameters);
-int check_regex_conditions_for_is_match_at_place(regex_component *component_list,
-    int component_index, const char *haystack);
+int check_regex_conditions_for_is_match_at_place(regex_component *component_list, int component_index,
+                                                 const char *haystack);
 void print_total_match_count(program_arguments *parameters, int line_matched_count);
 void exit_cleanup(regex_component **components_list, program_arguments *parameters, line *line_args);
 
@@ -139,10 +140,12 @@ int parse_phrase(char *original_string, regex_component **components_list)
       (*components_list)[component_index].actual_char_to_check = original_string[string_index];
     } else if (original_string[string_index] == LEFT_SQUARE_BRACKET) {
       (*components_list)[component_index].type = SQUARED_BRACKETS;
-      (*components_list)[component_index].low_range_limit = original_string[string_index + RANGE_START_OFFSET];
-      string_index += RANGE_END_OFFSET;
-      (*components_list)[component_index].upper_range_limit = original_string[string_index];
-      string_index++;
+      while (original_string[++string_index] != HYPHEN_CHAR) {
+      }
+      (*components_list)[component_index].low_range_limit = original_string[string_index + DECREMENT_1];
+      while (original_string[++string_index] != RIGHT_SQUARE_BRACKET) {
+      }
+      (*components_list)[component_index].upper_range_limit = original_string[string_index + DECREMENT_1];
     } else if (original_string[string_index] == LEFT_ROUND_BRACKET) {
       (*components_list)[component_index].type = ROUND_BRACKETS;
       (*components_list)[component_index].start_index_in_phrase = string_index;
@@ -203,7 +206,7 @@ void report_line_match(line *line_args, program_arguments *parameters, int *line
 
   if ((match = is_match_in_line(haystack, parameters, components_list, components_count))) {
 
-    if (line_args->line_offset_since_match == 0) { /* to long function, get all the if's into function */
+    if (line_args->line_offset_since_match == 0) {
       printf("--\n");
     }
     (*line_matched_count)++;
@@ -299,7 +302,7 @@ int is_match_at_place(char *haystack, int component_index, regex_component *comp
 }
 
 int check_regex_conditions_for_is_match_at_place(regex_component *component_list, int component_index,
-    const char *haystack)
+                                                 const char *haystack)
 {
 
   if ((component_list[component_index].type == REGULAR_CHAR ||
