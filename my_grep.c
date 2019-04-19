@@ -49,6 +49,8 @@ int is_match_in_line(char *haystack, program_arguments *parameters, regex_compon
                      int components_count);
 int is_match_at_place(char *haystack, int component_index, regex_component *component_list, int component_count,
                       program_arguments *parameters);
+int check_regex_conditions_for_is_match_at_place(regex_component *component_list,
+    int component_index, const char *haystack);
 void print_total_match_count(program_arguments *parameters, int line_matched_count);
 void exit_cleanup(regex_component **components_list, program_arguments *parameters, line *line_args);
 
@@ -81,7 +83,6 @@ int main(int argc, char **argv)
 void get_parameters_from_argv(program_arguments *parameters, int argc, char **argv)
 {
   int index;
-  parameters->phrase = NULL;
 
   if (argc < 2) {
     printf("Error: wrong number of arguments. Exiting...\n");
@@ -272,13 +273,7 @@ int is_match_at_place(char *haystack, int component_index, regex_component *comp
 
   if (component_index >= component_count) {
     match = TRUE;
-  } else if (((component_list[component_index].type == REGULAR_CHAR || /* put all this shit in one function */
-               component_list[component_index].type == ESCAPE_BACKSLASH) &&
-              component_list[component_index].actual_char_to_check == haystack[0]) ||
-             component_list[component_index].type == DOT ||
-             (component_list[component_index].type == SQUARED_BRACKETS &&
-              component_list[component_index].low_range_limit <= haystack[0] &&
-              component_list[component_index].upper_range_limit >= haystack[0])) {
+  } else if (check_regex_conditions_for_is_match_at_place(component_list, component_index, haystack)) {
     match = is_match_at_place(haystack + INCREMENT_1, component_index + INCREMENT_1, component_list, component_count,
                               parameters);
   } else if (component_list[component_index].type == ROUND_BRACKETS) {
@@ -301,6 +296,26 @@ int is_match_at_place(char *haystack, int component_index, regex_component *comp
     match = FALSE;
   }
   return match;
+}
+
+int check_regex_conditions_for_is_match_at_place(regex_component *component_list, int component_index,
+    const char *haystack)
+{
+
+  if ((component_list[component_index].type == REGULAR_CHAR ||
+       component_list[component_index].type == ESCAPE_BACKSLASH) &&
+      component_list[component_index].actual_char_to_check == haystack[0]) {
+    return TRUE;
+  }
+  if (component_list[component_index].type == DOT) {
+    return TRUE;
+  }
+  if (component_list[component_index].type == SQUARED_BRACKETS &&
+      component_list[component_index].low_range_limit <= haystack[0] &&
+      component_list[component_index].upper_range_limit >= haystack[0]) {
+    return TRUE;
+  }
+  return FALSE;
 }
 
 void print_total_match_count(program_arguments *parameters, int line_matched_count)
