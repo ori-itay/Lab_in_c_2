@@ -40,7 +40,7 @@ void get_parameters_from_argv(program_arguments *parameters, int argc, char **ar
       parameters->v = ACTIVE_ARGUMENT;
     } else if (strcmp(argv[index], "-x") == 0) {
       parameters->x = ACTIVE_ARGUMENT;
-    } else if (strcmp(argv[index], "-E") == 0) { /*argument -E is further implemented as in original grep*/
+    } else if (strcmp(argv[index], "-E") == 0) {
       parameters->E = ACTIVE_ARGUMENT;
     }
   }
