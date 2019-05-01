@@ -1,0 +1,3 @@
+pattern_search - This modules handles the pattern search with respect to the given arguments by the user.
+input_parser - This modules takes the user input and parses it into our well-defined structs which pattern_search operates on.
+main - handles the flow of the program, retrieve the input from user with input_parser module and then search the pattern with pattern_search module. 

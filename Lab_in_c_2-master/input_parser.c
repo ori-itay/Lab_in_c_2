@@ -1,32 +1,21 @@
 #include "input_parser.h"
-
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-
 
 #define BACKSLASH '\\'
 #define LEFT_SQUARE_BRACKET '['
 #define RIGHT_SQUARE_BRACKET ']'
 #define LEFT_ROUND_BRACKET '('
 #define RIGHT_ROUND_BRACKET ')'
-
 #define SPACE_CHAR ' '
 #define HYPHEN_CHAR '-'
 #define DOT_CHAR '.'
-
+#define HYPHEN_CHAR '-'
 
 #define ACTIVE_ARGUMENT 1
 #define DECIMAL_BASE 10
-#define HYPHEN_CHAR '-'
-
-
-
-
-
-
-
 
 int parse_phrase(char *original_string, regex_component **components_list)
 {
@@ -64,8 +53,6 @@ int parse_phrase(char *original_string, regex_component **components_list)
   }
   return component_index;
 }
-
-
 
 char *tolower_string(char *string)
 {
@@ -125,35 +112,13 @@ void get_parameters_from_argv(program_arguments *parameters, int argc, char **ar
   return;
 }
 
-void check_getline_error(int bytes_read, regex_component **components_list, program_arguments *parameters,
-                         line *line_args)
+void *allocate_dynamic_memory(int num_of_members, int member_size)
 {
-  if (bytes_read == -1 && errno) {
-    printf("End of File or error reading a line!\n");
-    exit_cleanup(components_list, parameters, line_args);
-    exit(EXIT_FAILURE);
-  }
-}
+  void *ret_pointer;
 
-void* allocate_dynamic_memory(int num_of_members, int member_size){
-  void* ret_pointer;
-
-  if ((ret_pointer = calloc(num_of_members, member_size) ) == NULL) {
+  if ((ret_pointer = calloc(num_of_members, member_size)) == NULL) {
     printf("Error while allocating memory. exiting...\n");
     exit(EXIT_FAILURE);
   }
   return ret_pointer;
-}
-
-void exit_cleanup(regex_component **components_list, program_arguments *parameters, line *line_args)
-{
-
-  if (parameters->i) {
-    free(parameters->phrase);
-  }
-  if (line_args->line_ptr != NULL) {
-    free(line_args->line_ptr);
-  }
-  free(*components_list);
-  fclose(parameters->fp);
 }

@@ -1,7 +1,6 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-
 #include <stdio.h>
 
 typedef struct program_arguments {

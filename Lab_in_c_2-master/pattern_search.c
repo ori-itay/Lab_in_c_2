@@ -8,24 +8,17 @@
 #define STRING_LENGTH_1 1
 #define INCREMENT_1 1
 
-
-
-
-void  report_line_match(line *line_args, program_arguments *parameters, int *line_matched_counter,
+void report_line_match(line *line_args, program_arguments *parameters, int *line_matched_counter,
                        regex_component *components_list, int components_count);
-int   is_match_in_line(char *haystack, program_arguments *parameters, regex_component *components_list,
+int is_match_in_line(char *haystack, program_arguments *parameters, regex_component *components_list,
                      int components_count);
-int   is_match_at_place(char *haystack, int component_index, regex_component *component_list, int component_count,
+int is_match_at_place(char *haystack, int component_index, regex_component *component_list, int component_count,
                       program_arguments *parameters);
-int   check_regex_conditions_for_is_match_at_place(regex_component *component_list, int component_index,
+int check_regex_conditions_for_is_match_at_place(regex_component *component_list, int component_index,
                                                  const char *haystack);
 
-
-
-
-
-void proccess_line(line *line_args, program_arguments *parameters, int *line_matched_counter, // Ori, change function name?
-                   regex_component *components_list, int components_count, int bytes_read)
+void search_in_line(line *line_args, program_arguments *parameters, int *line_matched_counter,
+                    regex_component *components_list, int components_count, int bytes_read)
 {
   report_line_match(line_args, parameters, line_matched_counter, components_list, components_count);
   line_args->current_line_num++;
@@ -84,10 +77,9 @@ int is_match_in_line(char *haystack, program_arguments *parameters, regex_compon
     haystack = tolower_string(haystack);
   }
   if (parameters->x) {
-    if(parameters->E){
+    if (parameters->E) {
       match = is_match_at_place(haystack, component_index, components_list, components_count, parameters);
-    }
-    else if (needle_len == haystack_len - 1) {
+    } else if (needle_len == haystack_len - 1) {
       match = is_match_at_place(haystack, component_index, components_list, components_count, parameters);
     }
   } else {
@@ -110,18 +102,17 @@ int is_match_at_place(char *haystack, int component_index, regex_component *comp
                       program_arguments *parameters)
 {
 
-  int match = 0, current_string_index, compare_length = 0, component_end_index, total_length_compared = 0;
+  int match = 0, current_string_index, compare_length = 0, component_end_index;
 
   if (component_index >= component_count) {
-    if(parameters->x && strlen(haystack)>STRING_LENGTH_1){
+    if (parameters->x && strlen(haystack) > STRING_LENGTH_1) {
       match = false;
-    }
-    else{
+    } else {
       match = true;
     }
   } else if (check_regex_conditions_for_is_match_at_place(component_list, component_index, haystack)) {
-      match = is_match_at_place(haystack + INCREMENT_1, component_index + INCREMENT_1, component_list, component_count,
-          parameters);
+    match = is_match_at_place(haystack + INCREMENT_1, component_index + INCREMENT_1, component_list, component_count,
+                              parameters);
   } else if (component_list[component_index].type == ROUND_BRACKETS) {
     current_string_index = component_list[component_index].start_index_in_phrase;
     component_end_index = component_list[component_index].end_index_in_phrase;

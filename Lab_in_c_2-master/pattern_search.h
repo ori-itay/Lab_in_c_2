@@ -1,6 +1,7 @@
 #ifndef PATTERN_SEARCH_H
 #define PATTERN_SEARCH_H
 
+#include "common.h"
 
 typedef struct line {
   char *line_ptr;
@@ -15,8 +16,7 @@ typedef struct regex_component {
   char actual_char_to_check;
 } regex_component;
 
-
-void  proccess_line(line *line_args, program_arguments *parameters, int *line_matched_counter,
-                   regex_component *components_list, int components_count, int bytes_read);
+void search_in_line(line *line_args, program_arguments *parameters, int *line_matched_counter,
+                    regex_component *components_list, int components_count, int bytes_read);
 
 #endif
