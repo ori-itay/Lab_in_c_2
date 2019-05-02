@@ -58,7 +58,7 @@ char *tolower_string(char *string)
 {
   int index;
   int length = strlen(string);
-  char *lowered_string = (char *)allocate_dynamic_memory(length + 1, sizeof(char));
+  char *lowered_string = (char *)calloc(length + 1, sizeof(char));
 
   strncpy(lowered_string, string, length);
   for (index = 0; index < length; index++) {
@@ -112,13 +112,3 @@ void get_parameters_from_argv(program_arguments *parameters, int argc, char **ar
   return;
 }
 
-void *allocate_dynamic_memory(int num_of_members, int member_size)
-{
-  void *ret_pointer;
-
-  if ((ret_pointer = calloc(num_of_members, member_size)) == NULL) {
-    printf("Error while allocating memory. exiting...\n");
-    exit(EXIT_FAILURE);
-  }
-  return ret_pointer;
-}

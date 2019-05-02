@@ -24,7 +24,7 @@ void test_search_in_line()
   parameters.phrase = "hello1";
   parameters.fp = stdin;
   regex_component *components_list =
-      (regex_component *)allocate_dynamic_memory(strlen(parameters.phrase), sizeof(regex_component));
+      (regex_component *)calloc(strlen(parameters.phrase), sizeof(regex_component));
 
   int components_count = parse_phrase(parameters.phrase, &components_list);
 
@@ -34,7 +34,7 @@ void test_search_in_line()
   line_matched_counter = 0;
 
   free(components_list);
-  components_list = (regex_component *)allocate_dynamic_memory(strlen(parameters.phrase), sizeof(regex_component));
+  components_list = (regex_component *)calloc(strlen(parameters.phrase), sizeof(regex_component));
   tested_line = "shouldn't find a match";
   bytes_read = strlen(tested_line);
 
@@ -45,7 +45,7 @@ void test_search_in_line()
   tested_line = "1ghello1\n";
   bytes_read = strlen(tested_line);
   parameters.phrase = "shouldn't find a match";
-  components_list = (regex_component *)allocate_dynamic_memory(strlen(parameters.phrase), sizeof(regex_component));
+  components_list = (regex_component *)calloc(strlen(parameters.phrase), sizeof(regex_component));
   components_count = parse_phrase(parameters.phrase, &components_list);
   search_in_line(&line_args, &parameters, &line_matched_counter, components_list, components_count, bytes_read);
   assert(line_matched_counter == 0);

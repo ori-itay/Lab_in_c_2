@@ -4,7 +4,6 @@
 #include <string.h>
 
 void test_get_parameters_from_argv();
-void test_allocate_dynamic_memory();
 void test_tolower_string();
 void test_parse_phrase();
 
@@ -28,7 +27,6 @@ int main()
 {
   test_get_parameters_from_argv();
   test_tolower_string();
-  test_allocate_dynamic_memory();
   test_parse_phrase();
   return 0;
 }
@@ -38,7 +36,7 @@ void test_parse_phrase()
   int index;
   char *phrase = "hello.world[!-  $]";
   regex_component *components_list =
-      (regex_component *)allocate_dynamic_memory(strlen(phrase), sizeof(regex_component));
+      (regex_component *)calloc(strlen(phrase), sizeof(regex_component));
   int tested_num_of_components = parse_phrase(phrase, &components_list);
   assert(tested_num_of_components == RESULT_NUM_OF_COMPONENTS_TEST_ONE);
   for (index = 0; index < MAX_INDEX_TEST_ONE; index++) {
@@ -56,7 +54,7 @@ void test_parse_phrase()
   free(components_list);
 
   phrase = "(hello|world)";
-  components_list = (regex_component *)allocate_dynamic_memory(strlen(phrase), sizeof(regex_component));
+  components_list = (regex_component *)calloc(strlen(phrase), sizeof(regex_component));
   tested_num_of_components = parse_phrase(phrase, &components_list);
   assert(tested_num_of_components == 1);
   assert(components_list[0].type == ROUND_BRACKETS && components_list[0].start_index_in_phrase == 0);
@@ -64,7 +62,7 @@ void test_parse_phrase()
   free(components_list);
 
   phrase = "\\[1-2\\]";
-  components_list = (regex_component *)allocate_dynamic_memory(strlen(phrase), sizeof(regex_component));
+  components_list = (regex_component *)calloc(strlen(phrase), sizeof(regex_component));
   tested_num_of_components = parse_phrase(phrase, &components_list);
   assert(tested_num_of_components == RESULT_NUM_OF_COMPONENTS_TEST_THREE);
   assert(components_list[0].type == ESCAPE_BACKSLASH);
@@ -75,7 +73,7 @@ void test_parse_phrase()
   free(components_list);
 
   phrase = "(a | )[b-d]";
-  components_list = (regex_component *)allocate_dynamic_memory(strlen(phrase), sizeof(regex_component));
+  components_list = (regex_component *)calloc(strlen(phrase), sizeof(regex_component));
   tested_num_of_components = parse_phrase(phrase, &components_list);
   assert(tested_num_of_components == RESULT_NUM_OF_COMPONENTS_TEST_FOUR);
   assert(components_list[0].type == ROUND_BRACKETS);
@@ -97,13 +95,7 @@ void test_get_parameters_from_argv()
          tested_paramters.x == IS_NOT_SET || tested_paramters.E == IS_NOT_SET || tested_paramters.fp == stdin);
 }
 
-void test_allocate_dynamic_memory()
-{
-  char zero_bytes[NUMBER_OF_ARGS] = {ZERO_PARAM_INIT};
-  char *tested_allocated_variable = (char *)allocate_dynamic_memory(NUMBER_OF_ARGS, sizeof(char));
-  assert(memcmp(tested_allocated_variable, zero_bytes, NUMBER_OF_ARGS) == 0);
-  free(tested_allocated_variable);
-}
+
 
 void test_tolower_string()
 {

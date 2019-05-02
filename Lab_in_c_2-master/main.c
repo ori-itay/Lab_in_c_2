@@ -23,7 +23,7 @@ int main(int argc, char **argv)
   int components_count;
 
   get_parameters_from_argv(&parameters, argc, argv);
-  components_list = (regex_component *)allocate_dynamic_memory(strlen(parameters.phrase), sizeof(regex_component));
+  components_list = (regex_component *)calloc(strlen(parameters.phrase), sizeof(regex_component));
   components_count = parse_phrase(parameters.phrase, &components_list);
   find_matches_in_input(&line_args, &parameters, &components_list, components_count);
   exit_cleanup(&components_list, &parameters, &line_args);
