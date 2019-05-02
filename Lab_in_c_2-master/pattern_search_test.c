@@ -12,7 +12,7 @@ void test_search_in_line();
 int main()
 {
   test_search_in_line();
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 void test_search_in_line()

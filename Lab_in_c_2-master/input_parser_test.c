@@ -28,7 +28,7 @@ int main()
   test_get_parameters_from_argv();
   test_tolower_string();
   test_parse_phrase();
-  return 0;
+  return EXIT_SUCCESS;
 }
 
 void test_parse_phrase()
