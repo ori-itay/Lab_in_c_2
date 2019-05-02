@@ -23,8 +23,7 @@ void test_search_in_line()
   int line_matched_counter = 0;
   parameters.phrase = "hello1";
   parameters.fp = stdin;
-  regex_component *components_list =
-      (regex_component *)calloc(strlen(parameters.phrase), sizeof(regex_component));
+  regex_component *components_list = (regex_component *)calloc(strlen(parameters.phrase), sizeof(regex_component));
 
   int components_count = parse_phrase(parameters.phrase, &components_list);
 

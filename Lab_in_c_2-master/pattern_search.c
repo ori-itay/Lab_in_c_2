@@ -28,7 +28,6 @@ void search_in_line(line *line_args, program_arguments *parameters, int *line_ma
 void report_line_match(line *line_args, program_arguments *parameters, int *line_matched_counter,
                        regex_component *components_list, int components_count)
 {
-
   int match = 0;
   char *haystack = line_args->line_ptr;
 
@@ -101,7 +100,6 @@ int is_match_in_line(char *haystack, program_arguments *parameters, regex_compon
 int is_match_at_place(char *haystack, int component_index, regex_component *component_list, int component_count,
                       program_arguments *parameters)
 {
-
   int match = 0, current_string_index, compare_length = 0, component_end_index;
 
   if (component_index >= component_count) {
@@ -138,7 +136,6 @@ int is_match_at_place(char *haystack, int component_index, regex_component *comp
 int check_regex_conditions_for_is_match_at_place(regex_component *component_list, int component_index,
                                                  const char *haystack)
 {
-
   if ((component_list[component_index].type == REGULAR_CHAR ||
        component_list[component_index].type == ESCAPE_BACKSLASH) &&
       component_list[component_index].actual_char_to_check == haystack[0]) {

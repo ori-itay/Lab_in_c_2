@@ -19,7 +19,6 @@
 
 int parse_phrase(char *original_string, regex_component **components_list)
 {
-
   int str_len = strlen(original_string), string_index, component_index = 0;
 
   for (string_index = 0; string_index < str_len; string_index++) {
@@ -111,4 +110,3 @@ void get_parameters_from_argv(program_arguments *parameters, int argc, char **ar
   }
   return;
 }
-

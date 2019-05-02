@@ -35,8 +35,7 @@ void test_parse_phrase()
 {
   int index;
   char *phrase = "hello.world[!-  $]";
-  regex_component *components_list =
-      (regex_component *)calloc(strlen(phrase), sizeof(regex_component));
+  regex_component *components_list = (regex_component *)calloc(strlen(phrase), sizeof(regex_component));
   int tested_num_of_components = parse_phrase(phrase, &components_list);
   assert(tested_num_of_components == RESULT_NUM_OF_COMPONENTS_TEST_ONE);
   for (index = 0; index < MAX_INDEX_TEST_ONE; index++) {
@@ -94,8 +93,6 @@ void test_get_parameters_from_argv()
   assert(tested_paramters.b == IS_NOT_SET || tested_paramters.c == IS_NOT_SET || tested_paramters.n == IS_NOT_SET ||
          tested_paramters.x == IS_NOT_SET || tested_paramters.E == IS_NOT_SET || tested_paramters.fp == stdin);
 }
-
-
 
 void test_tolower_string()
 {
